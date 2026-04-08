@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meetbonnen Downloader</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F4F2ED;
+    --surface: #FFFFFF;
+    --surface2: #EDEAE3;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #1A1916;
+    --text2: #6B6860;
+    --text3: #A09D97;
+    --accent: #1A1916;
+    --green: #2D6A4F;
+    --green-bg: #D8EFDF;
+    --amber: #7A4F00;
+    --amber-bg: #FDE9B0;
+    --red: #8B2020;
+    --red-bg: #FAD9D9;
+    --blue: #1A3A6B;
+    --blue-mid: #2D6CB4;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--text);
+    color: #F4F2ED;
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header-icon {
+    width: 34px;
+    height: 34px;
+    background: #F4F2ED;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-icon svg { color: var(--text); }
+
+  header h1 { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+  header p { font-size: 12px; opacity: 0.5; margin-top: 1px; }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  .step { margin-bottom: 28px; }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .step-num {
+    width: 22px;
+    height: 22px;
+    background: var(--text);
+    color: var(--bg);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-title {
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    background: var(--surface);
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    background: var(--surface2);
+    border-color: rgba(0,0,0,0.25);
+  }
+
+  .drop-zone input[type=file] { display: none; }
+
+  .drop-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--surface2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+  }
+
+  .drop-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .drop-sub { font-size: 12px; color: var(--text3); }
+
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  select, input[type=number] {
+    width: 100%;
+    padding: 9px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.15s;
+  }
+
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6860' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+  select:focus, input[type=number]:focus { border-color: var(--text); }
+
+  .file-loaded {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+  }
+
+  .file-loaded-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--green-bg);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .file-name { font-size: 13px; font-weight: 500; }
+  .file-meta { font-size: 12px; color: var(--text3); margin-top: 1px; }
+
+  .links-preview { margin-top: 16px; }
+
+  .preview-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  .link-row:last-child { border-bottom: none; }
+  .link-num { color: var(--text3); width: 28px; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+  .link-url { color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'DM Mono', monospace; font-size: 11px; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .metric {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    text-align: center;
+  }
+
+  .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-val { font-size: 26px; font-weight: 300; color: var(--text); font-family: 'DM Mono', monospace; }
+  .metric-val.green { color: var(--green); }
+  .metric-val.amber { color: var(--amber); }
+  .metric-val.red { color: var(--red); }
+
+  .progress-wrap {
+    height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--text);
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: -0.01em;
+  }
+
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.99); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .log-box {
+    margin-top: 16px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    max-height: 240px;
+    overflow-y: auto;
+    display: none;
+  }
+
+  .log-line {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 3px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-line:last-child { border-bottom: none; }
+
+  .log-tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 1px 7px;
+    border-radius: 99px;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tag-ok { background: var(--green-bg); color: var(--green); }
+  .tag-skip { background: var(--amber-bg); color: var(--amber); }
+  .tag-err { background: var(--red-bg); color: var(--red); }
+  .tag-info { background: var(--surface2); color: var(--text2); }
+
+  .log-msg { color: var(--text2); flex: 1; }
+
+  .notice {
+    background: var(--amber-bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--amber);
+    line-height: 1.7;
+    margin-top: 14px;
+    display: none;
+  }
+
+  .notice strong { font-weight: 500; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 520px) {
+    .settings-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    header { padding: 16px 20px; }
+    main { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Meetbonnen Downloader</h1>
+    <p>PDF-links uit Excel ophalen &amp; downloaden</p>
+  </div>
+</header>
+
+<main>
+
+  <div class="step" id="step1">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <span class="step-title">Upload Excel-bestand</span>
+    </div>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+      <div class="drop-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B6860" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <p class="drop-title" id="dropTitle">Sleep je .xlsx-bestand hierheen</p>
+      <p class="drop-sub">of klik om te kiezen &nbsp;·&nbsp; .xlsx en .xls ondersteund</p>
+    </div>
+  </div>
+
+  <div class="step hidden" id="step2">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <span class="step-title">Instellingen</span>
+    </div>
+    <div class="card">
+      <div class="file-loaded" id="fileLoaded">
+        <div class="file-loaded-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div class="file-name" id="fileName">—</div>
+          <div class="file-meta" id="fileMeta">—</div>
+        </div>
+      </div>
+      <div class="settings-grid">
+        <div class="field">
+          <label>Kolom met PDF-links</label>
+          <select id="colSelect" onchange="updatePreview()"></select>
+        </div>
+        <div class="field">
+          <label>Beginrij (standaard: 2)</label>
+          <input type="number" id="startRow" value="2" min="1" onchange="updatePreview()">
+        </div>
+      </div>
+      <div class="links-preview hidden" id="linksPreview"></div>
+    </div>
+  </div>
+
+  <div class="step hidden" id="step3">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <span class="step-title">Download</span>
+    </div>
+    <div class="card">
+      <div class="metrics-grid">
+        <div class="metric">
+          <div class="metric-label">Gevonden</div>
+          <div class="metric-val" id="mTotal">0</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Gedownload</div>
+          <div class="metric-val green" id="mOk">0</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Overgeslagen</div>
+          <div class="metric-val amber" id="mSkip">0</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Fouten</div>
+          <div class="metric-val red" id="mErr">0</div>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <button class="btn" id="startBtn" onclick="startDownload()">Download alle PDF's</button>
+      <div class="notice" id="corsNotice">
+        <strong>Let op — CORS blokkade:</strong> je browser staat niet toe dat bestanden van deze server direct worden gedownload. Dit is een browserbeperking, niet een fout in de tool. Gebruik het originele Python-script voor betrouwbare bulkdownload, of vraag de IT-afdeling om CORS-headers in te stellen op de bestandsserver.
+      </div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let workbook = null;
+let links = [];
+let stats = { ok: 0, skip: 0, err: 0 };
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  if (!file) return;
+  document.getElementById('dropTitle').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    workbook = XLSX.read(e.target.result, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+    const ncols = range.e.c + 1;
+    const nrows = range.e.r + 1;
+
+    const colSel = document.getElementById('colSelect');
+    colSel.innerHTML = '';
+    for (let c = 0; c < ncols; c++) {
+      const letter = XLSX.utils.encode_col(c);
+      const header = sheet[XLSX.utils.encode_cell({r: 0, c})]?.v || '';
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = `Kolom ${letter}${header ? ' – ' + String(header).substring(0, 30) : ''}`;
+      if (c === 10) opt.selected = true;
+      colSel.appendChild(opt);
+    }
+
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileMeta').textContent = `${workbook.SheetNames[0]}  ·  ${nrows} rijen  ·  ${ncols} kolommen`;
+
+    document.getElementById('step2').classList.remove('hidden');
+    document.getElementById('step3').classList.remove('hidden');
+    updatePreview();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function updatePreview() {
+  if (!workbook) return;
+  const colIdx = parseInt(document.getElementById('colSelect').value);
+  const startRow = Math.max(1, parseInt(document.getElementById('startRow').value) || 2) - 1;
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+
+  links = [];
+  for (let r = startRow; r <= range.e.r; r++) {
+    const cell = sheet[XLSX.utils.encode_cell({r, c: colIdx})];
+    if (cell && cell.v) {
+      const val = String(cell.v).trim();
+      if (val.startsWith('http')) links.push({ row: r + 1, url: val });
+    }
+  }
+
+  document.getElementById('mTotal').textContent = links.length;
+
+  const preview = document.getElementById('linksPreview');
+  if (links.length > 0) {
+    preview.classList.remove('hidden');
+    const shown = links.slice(0, 4);
+    preview.innerHTML = `<div class="preview-label">${links.length} links gevonden — voorbeeld</div>` +
+      shown.map(l => `<div class="link-row"><span class="link-num">r${l.row}</span><span class="link-url">${l.url}</span></div>`).join('') +
+      (links.length > 4 ? `<div class="link-row"><span class="link-num" style="color:var(--text3)">···</span><span style="font-size:12px;color:var(--text3)">+ ${links.length - 4} meer</span></div>` : '');
+  } else {
+    preview.classList.remove('hidden');
+    preview.innerHTML = `<div class="preview-label" style="color:var(--amber)">Geen geldige URLs gevonden in deze kolom</div>`;
+  }
+}
+
+function log(msg, type) {
+  const box = document.getElementById('logBox');
+  box.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  const tagClass = { ok: 'tag-ok', skip: 'tag-skip', err: 'tag-err', info: 'tag-info' }[type] || 'tag-info';
+  const tagText = { ok: 'OK', skip: 'SKIP', err: 'ERR', info: '···' }[type] || '···';
+  line.innerHTML = `<span class="log-tag ${tagClass}">${tagText}</span><span class="log-msg">${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function startDownload() {
+  if (!links.length) return;
+  stats = { ok: 0, skip: 0, err: 0 };
+  ['mOk','mSkip','mErr'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('logBox').style.display = 'none';
+  document.getElementById('corsNotice').style.display = 'none';
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('progressBar').style.width = '0%';
+
+  let corsBlocked = false;
+
+  for (let i = 0; i < links.length; i++) {
+    const { url, row } = links[i];
+    document.getElementById('progressBar').style.width = Math.round((i / links.length) * 100) + '%';
+
+    let filename = decodeURIComponent(url.split('/').pop().split('?')[0]);
+    if (!filename.toLowerCase().endsWith('.pdf')) filename = `meetbon_rij${row}.pdf`;
+
+    try {
+      const resp = await fetch(url, { mode: 'cors' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      stats.ok++;
+      document.getElementById('mOk').textContent = stats.ok;
+      log(`Rij ${row}: ${filename}`, 'ok');
+    } catch(e) {
+      const isCors = e.message.includes('fetch') || e.message.includes('NetworkError') || e.message.includes('Failed');
+      if (isCors) corsBlocked = true;
+      stats.err++;
+      document.getElementById('mErr').textContent = stats.err;
+      log(`Rij ${row}: ${isCors ? 'geblokkeerd (CORS)' : e.message} — ${filename}`, 'err');
+    }
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('startBtn').disabled = false;
+  log(`Klaar — ${stats.ok} gedownload · ${stats.skip} overgeslagen · ${stats.err} fouten`, 'info');
+  if (corsBlocked) document.getElementById('corsNotice').style.display = 'block';
+}
+</script>
+</body>
+</html>
