@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Meetbonnen Downloader</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+body { font-family: Arial; padding: 30px; background: #f4f2ed; }
+.box { background: white; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; }
+button { padding: 10px; margin-top: 10px; width: 100%; }
+#log { margin-top: 15px; max-height: 200px; overflow: auto; font-size: 12px; }
+</style>
+</head>
+
+<body>
+<div class="box">
+<h2>Meetbonnen Downloader</h2>
+
+<input type="file" id="file" accept=".xlsx,.xls"><br>
+<button onclick="start()">Download / Open PDF's</button>
+
+<div id="stats"></div>
+<div id="log"></div>
+</div>
+
+<script>
+let links = [];
+
+document.getElementById("file").addEventListener("change", function(e) {
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const wb = XLSX.read(e.target.result, {type:'array'});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, {header:1});
+
+    links = [];
+
+    for(let i = 1; i < data.length; i++){
+      let val = data[i][10]; // kolom K
+      if(val && val.startsWith("http")){
+        links.push(val);
+      }
+    }
+
+    document.getElementById("stats").innerHTML = links.length + " links gevonden";
+  };
+
+  reader.readAsArrayBuffer(e.target.files[0]);
+});
+
+function log(msg){
+  document.getElementById("log").innerHTML += msg + "<br>";
+}
+
+async function start(){
+  if(!links.length) return;
+
+  for(let i=0; i<links.length; i++){
+    let url = links[i];
+
+    try {
+      let res = await fetch(url);
+
+      if(res.ok){
+        let blob = await res.blob();
+        let a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "bestand_" + i + ".pdf";
+        a.click();
+        log("OK: " + url);
+      } else {
+        window.open(url);
+        log("OPEN (fallback): " + url);
+      }
+
+    } catch(e){
+      window.open(url);
+      log("OPEN (CORS): " + url);
+    }
+
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+</script>
+
+</body>
+</html>
